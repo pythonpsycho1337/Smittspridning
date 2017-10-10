@@ -1,7 +1,7 @@
 import os, sys, time, random, platform, queue
 from enum import Enum
 
-#Example call: python contamination.py 0.5 0.1 5 10 0,0;1,1;2,2
+#Example call: py contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
 
 class State(Enum):
 	HEALTHY = 1
