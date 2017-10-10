@@ -1,33 +1,54 @@
-import os, sys, time, random, platform
+import os, sys, time, random, platform, queue
+from enum import Enum
 
 #Example call: python contamination.py 0.5 0.1 5 10 0,0;1,1;2,2
 
+class State(Enum):
+	HEALTHY = 1
+	SICK = 2
+	DEAD = 3
+	IMMUNE = 4
+
 class Individual:
-	def __init__(self,state):
+	def __init__(self, parrent,state):
 		self.state = state #-2=Immune -1=Dead 0=healthy 0<x = Ill where x is days left as ill
-		self.nextState = state
+		self.days = 0
+		self.parrent = parrent
 	def __str__(self):
-		return ["I","-","O","*"][min(self.state,1)+2]
-	def tryToInfect(self,probabilty,days):
-		if self.state != 0:#not healthy
-			return 0
-		if random.random() < probabilty: #Infected
-			self.nextState = days
+		if self.state == State.HEALTHY:
+			return "H"
+		if self.state == State.SICK:
+			return "S"
+		if self.state == State.DEAD:
+			return "D"
+		if self.state == State.IMMUNE:
+			return "I"
+	def tryToInfect(self,probabilty):
+		if self.state == State.HEALTHY and random.random() < probabilty: #Infected
+			self.state = State.SICK
+			self.parrent.numOfSick += 1
 			return 1
-	def tryToDie(self,probabilty):
-		if self.state <= 0:#Not infected
+	def tryToDie(self,probabilty, minSickDays):
+		if self.days <= minSickDays:
+			return 0
+		if self.state != State.SICK:#Not infected
 			return 0
 		r = random.random()
 		if r < probabilty:
-			self.nextState = -1;
+			self.state = State.DEAD
+			self.parrent.numOfSick -= 1
+			self.parrent.numOfDeath += 1
 			return 1
-	def tryToBI(self):#Try to become immune
-		if self.state <= 0 or self.nextState == -1:#Not infected
-			return
-		if self.state == 1:
-			self.nextState = -2
-		else:
-			self.nextState -= 1;
+	def tryToBI(self, minSickDays, maxSickDays):#Try to become immune
+		if self.state != State.SICK or self.days <= minSickDays:
+			return 0
+
+		if random.random() < (1/(maxSickDays-minSickDays)) or self.days > maxSickDays:
+			self.state = State.IMMUNE
+			self.parrent.numOfSick -= 1
+			self.parrent.numOfImmune += 1
+			return 1
+		return 0
 	@staticmethod
 	def getNeighbours(iCoordinates,gridDimension):
 		coords = []
@@ -39,19 +60,27 @@ class Individual:
 					continue
 				coords.append([x,y])
 		return coords
-class ContaminationSimulation:	
+class ContaminationSimulation:
 	def __init__(self,params):
 		if len(params) >= 4:
+			self.numOfSick = 0
+			self.numOfDeath = 0
+			self.numOfImmune = 0
+			self.prevNumOfSick = 0
+			self.prevNumOfDeath = 0
+			self.prevNumOfImmune = 0
+			self.queue = queue.Queue()
 			self.probCont = float(params[1]) #Probability of contamination
 			self.probDeath = float(params[2]) #Probability of death
-			self.sickDays = int(params[3]) #How long an Individual is sick
-			self.gridDimension = int(params[4] )#The dimensions of the grid
-			self.generateGrid(self.parseCoordinates(params[5])) #Generate the grid using the coordinates of the sick Individuals
+			self.minSickDays = int(params[3])
+			self.maxSickDays = int(params[4]) #How long an Individual is sick
+			self.gridDimension = int(params[5] )#The dimensions of the grid
+			self.generateGrid(self.parseCoordinates(params[6])) #Generate the grid using the coordinates of the sick Individuals
 		else:
-			out = "Usage: python contamination.py <Probability of contamination> <Probability of death> <Sick time> "
+			out = "Usage: python contamination.py <Probability of contamination> <Probability of death> <Min Sick Days> <Max Sick Days> "
 			out += "<Grid dimensions><Coordinates of sick Individuals>"
 			out+="\nCoordinates are specified in the following format x,y;x2,y2 where x=0,y=0 is in the top left corner.\nExample: 1,2;1,3"
-			print out
+			print (out)
 			sys.exit(0)
 	def parseCoordinates(self,Cstr):#Cstr = CoordinatesString
 		coordinates = []
@@ -62,17 +91,26 @@ class ContaminationSimulation:
 			coord[1] = int(coord[1])
 			coordinates.append(coord)
 		return coordinates
-		
+
 	def generateGrid(self,sickCoord):
 		self.Grid = []
 		for row in range(0,self.gridDimension):#Create grid with healthy Individuals as default
 			self.Grid.append([])
 			for col in range(0,self.gridDimension):
-				self.Grid[row].append(Individual(0))
+				self.Grid[row].append(Individual(self,State.HEALTHY))
 		for i in range(0,len(sickCoord)):#Set sick Individuals
-			self.Grid[sickCoord[i][0]][sickCoord[i][1]].state = self.sickDays
+			self.Grid[sickCoord[i][0]][sickCoord[i][1]].state = State.SICK
+			self.queue.put(sickCoord[i])
+			self.numOfSick += 1
+
+	def display(self):
+		clearTerminal()
+		self.displayInfo()
+		self.displayGrid()
+		self.displayStats()
 	def displayInfo(self):
-		print "probCont="+str(self.probCont)+"\tprobDeath="+str(self.probDeath)+"\tsickDays"+str(self.sickDays)+"\tgridDimension="+str(self.gridDimension)
+		print ("probCont="+str(self.probCont)+"\tprobDeath="+str(self.probDeath)+"\minSickDays"+str(self.minSickDays)+"\tgridDimension="+str(self.gridDimension))
+
 	def displayGrid(self):
 		out = ""
 		for row in range(0,self.gridDimension):
@@ -80,39 +118,52 @@ class ContaminationSimulation:
 				out += " " + str(self.Grid[row][col])
 			out +="\n"
 		print(out)
-	def displayStats(self):#TODO
-		print ""
-		
+	def displayStats(self):
+		total = self.gridDimension * self.gridDimension
+		dead = (self.numOfDeath - self.prevNumOfDeath)
+		immune = (self.numOfImmune - self.prevNumOfImmune)
+		infected = (self.numOfSick - self.prevNumOfSick) #+ dead + immune
+		healthy = total - self.numOfSick - self.numOfDeath - self.numOfImmune
+		print ("Total: \tHealthy " + str(healthy) + " \tSick " + str(self.numOfSick) + "\tDead " + str(self.numOfDeath) + "\tImmune " + str(self.numOfImmune))
+		print ("Today: \tInfected " + str(self.infected) + "\tDead " + str(dead) + "\tImmune " + str(immune))
+
 	def run(self):
-		clearTerminal()
-		self.displayInfo()
-		self.displayGrid()
-		self.displayStats()
-		time.sleep(0.5)
+
+		self.infected = 0
+		self.display()
+
 		#animate("Press enter to continue...\n")
 		#raw_input()
-		self.playOneDay()
-		self.run()
-	def playOneDay(self):
-		for row in range(0,self.gridDimension): #Infection phase
-			for col in range(0,self.gridDimension):
-				if self.Grid[row][col].state > 0:#If infected
-					for cord in Individual.getNeighbours([row,col],self.gridDimension):
-						self.Grid[cord[0]][cord[1]].tryToInfect(self.probCont,self.sickDays)
-				
-		for row in range(0,self.gridDimension): #Death phase
-			for col in range(0,self.gridDimension):
-				self.Grid[row][col].tryToDie(self.probDeath)
-				self.Grid[row][col].tryToBI()#Try to become immune		
-		
-		for row in range(0,self.gridDimension): #Update states
-			for col in range(0,self.gridDimension):
-				self.Grid[row][col].state = self.Grid[row][col].nextState
+		while not self.queue.empty():
+			#time.sleep(0.5)
+			self.nextQueue = queue.Queue()
+			while not self.queue.empty():
+				self.playOneDay(self.queue.get())
+			self.queue = self.nextQueue
+			self.display()
+			self.prevNumOfSick = self.numOfSick
+			self.prevNumOfDeath = self.numOfDeath
+			self.prevNumOfImmune = self.numOfImmune
+			self.infected = 0
+		self.display()
+
+
+	def playOneDay(self, individual):
+		for cord in Individual.getNeighbours([individual[0],individual[1]],self.gridDimension):
+			if self.Grid[cord[0]][cord[1]].tryToInfect(self.probCont) == 1:
+				self.nextQueue.put(cord)
+				self.infected += 1
+
+		self.Grid[individual[0]][individual[1]].tryToDie(self.probDeath, self.minSickDays)
+		self.Grid[individual[0]][individual[1]].tryToBI(self.minSickDays, self.maxSickDays)#Try to become immune
+		if self.Grid[individual[0]][individual[1]].state == State.SICK:
+			self.nextQueue.put(individual)
+			self.Grid[individual[0]][individual[1]].days += 1
 
 class Test():
 	def paramTest():
 		pass
-		
+
 def animate(text):
 	for i in range(0,len(text)):
 		sys.stdout.write(text[i])
