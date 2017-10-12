@@ -10,7 +10,7 @@ IMMUNE = 4
 
 class Individual:
 	def __init__(self, parrent,state):
-		self.state = state #-2=Immune -1=Dead 0=healthy 0<x = Ill where x is days left as ill
+		self.state = state
 		self.days = 0
 		self.parrent = parrent
 	def __str__(self):
@@ -179,6 +179,6 @@ def clearTerminal():
 		os.system("clear")
 
 if __name__ == "__main__":
-	random.seed(3)
+	#random.seed(3)
 	cS = ContaminationSimulation(sys.argv)
 	cS.run()
