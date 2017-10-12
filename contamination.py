@@ -62,6 +62,7 @@ class Individual:
 class ContaminationSimulation:
 	def __init__(self,params):
 		if len(params) >= 4:
+			self.day = 0
 			self.numOfSick = 0
 			self.numOfDeath = 0
 			self.numOfImmune = 0
@@ -108,7 +109,7 @@ class ContaminationSimulation:
 		self.displayGrid()
 		self.displayStats()
 	def displayInfo(self):
-		print ("probCont="+str(self.probCont)+"\tprobDeath="+str(self.probDeath)+"\minSickDays"+str(self.minSickDays)+"\tgridDimension="+str(self.gridDimension))
+		print ("probCont="+str(self.probCont)+"\tprobDeath="+str(self.probDeath)+"\tminSickDays = "+str(self.minSickDays)+"\tmaxSickDays = "+str(self.maxSickDays) +"\tgridDimension="+str(self.gridDimension))
 
 	def displayGrid(self):
 		out = ""
@@ -123,6 +124,7 @@ class ContaminationSimulation:
 		immune = (self.numOfImmune - self.prevNumOfImmune)
 		infected = (self.numOfSick - self.prevNumOfSick) #+ dead + immune
 		healthy = total - self.numOfSick - self.numOfDeath - self.numOfImmune
+		print ("Day: " +  str(self.day))
 		print ("Total: \tHealthy " + str(healthy) + " \tSick " + str(self.numOfSick) + "\tDead " + str(self.numOfDeath) + "\tImmune " + str(self.numOfImmune))
 		print ("Today: \tInfected " + str(self.infected) + "\tDead " + str(dead) + "\tImmune " + str(immune))
 
@@ -139,11 +141,13 @@ class ContaminationSimulation:
 			while len(self.queue) != 0:
 				self.playOneDay(self.queue.popleft())
 			self.queue = self.nextQueue
+			self.day += 1
 			self.display()
 			self.prevNumOfSick = self.numOfSick
 			self.prevNumOfDeath = self.numOfDeath
 			self.prevNumOfImmune = self.numOfImmune
 			self.infected = 0
+
 		self.display()
 
 
