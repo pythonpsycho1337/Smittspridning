@@ -179,6 +179,6 @@ def clearTerminal():
 		os.system("clear")
 
 if __name__ == "__main__":
-	#random.seed(3)
+	random.seed(3)
 	cS = ContaminationSimulation(sys.argv)
 	cS.run()
