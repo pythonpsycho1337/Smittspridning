@@ -1,13 +1,12 @@
-import os, sys, time, random, platform, queue
-from enum import Enum
+import os, sys, time, random, platform
+from collections import deque
 
 #Example call: py contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
 
-class State(Enum):
-	HEALTHY = 1
-	SICK = 2
-	DEAD = 3
-	IMMUNE = 4
+HEALTHY = 1
+SICK = 2
+DEAD = 3
+IMMUNE = 4
 
 class Individual:
 	def __init__(self, parrent,state):
@@ -15,42 +14,42 @@ class Individual:
 		self.days = 0
 		self.parrent = parrent
 	def __str__(self):
-		if self.state == State.HEALTHY:
+		if self.state == HEALTHY:
 			return "H"
-		if self.state == State.SICK:
+		if self.state == SICK:
 			return "S"
-		if self.state == State.DEAD:
+		if self.state == DEAD:
 			return "D"
-		if self.state == State.IMMUNE:
+		if self.state == IMMUNE:
 			return "I"
 	def tryToInfect(self,probabilty):
-		if self.state == State.HEALTHY and random.random() < probabilty: #Infected
-			self.state = State.SICK
+		if self.state == HEALTHY and random.random() < probabilty: #Infected
+			self.state = SICK
 			self.parrent.numOfSick += 1
 			return 1
 	def tryToDie(self,probabilty, minSickDays):
 		if self.days <= minSickDays:
 			return 0
-		if self.state != State.SICK:#Not infected
+		if self.state != SICK:#Not infected
 			return 0
 		r = random.random()
 		if r < probabilty:
-			self.state = State.DEAD
+			self.state = DEAD
 			self.parrent.numOfSick -= 1
 			self.parrent.numOfDeath += 1
 			return 1
 	def tryToBI(self, minSickDays, maxSickDays):#Try to become immune
-		if self.state != State.SICK or self.days <= minSickDays:
+		if self.state != SICK or self.days <= minSickDays:
 			return 0
 
 		if random.random() < (1/(maxSickDays-minSickDays)) or self.days > maxSickDays:
-			self.state = State.IMMUNE
+			self.state = IMMUNE
 			self.parrent.numOfSick -= 1
 			self.parrent.numOfImmune += 1
 			return 1
 		return 0
 	@staticmethod
-	def getNeighbours(iCoordinates,gridDimension):
+	def popleftNeighbours(iCoordinates,gridDimension):
 		coords = []
 		for x in range(iCoordinates[0]-1,iCoordinates[0]+2):
 			if(x < 0 or x >= gridDimension):
@@ -69,7 +68,7 @@ class ContaminationSimulation:
 			self.prevNumOfSick = 0
 			self.prevNumOfDeath = 0
 			self.prevNumOfImmune = 0
-			self.queue = queue.Queue()
+			self.queue = deque()
 			self.probCont = float(params[1]) #Probability of contamination
 			self.probDeath = float(params[2]) #Probability of death
 			self.minSickDays = int(params[3])
@@ -97,10 +96,10 @@ class ContaminationSimulation:
 		for row in range(0,self.gridDimension):#Create grid with healthy Individuals as default
 			self.Grid.append([])
 			for col in range(0,self.gridDimension):
-				self.Grid[row].append(Individual(self,State.HEALTHY))
+				self.Grid[row].append(Individual(self,HEALTHY))
 		for i in range(0,len(sickCoord)):#Set sick Individuals
-			self.Grid[sickCoord[i][0]][sickCoord[i][1]].state = State.SICK
-			self.queue.put(sickCoord[i])
+			self.Grid[sickCoord[i][0]][sickCoord[i][1]].state = SICK
+			self.queue.append(sickCoord[i])
 			self.numOfSick += 1
 
 	def display(self):
@@ -133,12 +132,12 @@ class ContaminationSimulation:
 		self.display()
 
 		#animate("Press enter to continue...\n")
-		#raw_input()
-		while not self.queue.empty():
+		#raw_inappend()
+		while len(self.queue) != 0:
 			#time.sleep(0.5)
-			self.nextQueue = queue.Queue()
-			while not self.queue.empty():
-				self.playOneDay(self.queue.get())
+			self.nextQueue = deque()
+			while len(self.queue) != 0:
+				self.playOneDay(self.queue.popleft())
 			self.queue = self.nextQueue
 			self.display()
 			self.prevNumOfSick = self.numOfSick
@@ -149,15 +148,15 @@ class ContaminationSimulation:
 
 
 	def playOneDay(self, individual):
-		for cord in Individual.getNeighbours([individual[0],individual[1]],self.gridDimension):
+		for cord in Individual.popleftNeighbours([individual[0],individual[1]],self.gridDimension):
 			if self.Grid[cord[0]][cord[1]].tryToInfect(self.probCont) == 1:
-				self.nextQueue.put(cord)
+				self.nextQueue.append(cord)
 				self.infected += 1
 
 		self.Grid[individual[0]][individual[1]].tryToDie(self.probDeath, self.minSickDays)
 		self.Grid[individual[0]][individual[1]].tryToBI(self.minSickDays, self.maxSickDays)#Try to become immune
-		if self.Grid[individual[0]][individual[1]].state == State.SICK:
-			self.nextQueue.put(individual)
+		if self.Grid[individual[0]][individual[1]].state == SICK:
+			self.nextQueue.append(individual)
 			self.Grid[individual[0]][individual[1]].days += 1
 
 class Test():
