@@ -53,15 +53,25 @@ class Individual:
 	# 	minSickDays, minimum of sick days before the disease is cureable
 	#	maxSickDays, maximun of days being sick, after that a individual will become immune
 	def tryToBI(self, minSickDays, maxSickDays):
-		if self.state != SICK or self.days <= minSickDays:			# Disease not cureable yet
+		if self.state != SICK:										# Disease not cureable yet
 			return 0
-		probabilty = (1/(maxSickDays-minSickDays))
-		if random.random() < probabilty or self.days > maxSickDays:	# Chance of becoming immune
+		r = random.random()
+		probabilty = self.immuneProbilty(minSickDays, maxSickDays, self.days)
+		if r < probabilty:											# Chance of becoming immune
 			self.state = IMMUNE										# Change state to IMMUNE
 			self.parrent.numOfSick -= 1								# Decrement number of sick
 			self.parrent.numOfImmune += 1							# Increment number of immune
 			return 1
 		return 0
+
+	@staticmethod
+	def immuneProbilty(minSickDays, maxSickDays, days):
+		if days < minSickDays:										# Disease not cureable yet
+			return 0
+		if days < maxSickDays:
+			return (1.0/(maxSickDays-minSickDays))
+		return 1
+
 	# Generate a list with all neighbours for a individual
 	#
 	# Input:
@@ -113,7 +123,8 @@ class ContaminationSimulation:
 	#	Cstr = CoordinatesString, string to parse
 	# Return:
 	# 	List of Parsed Coordinates
-	def parseCoordinates(self,Cstr):								#Cstr = CoordinatesString
+	@staticmethod
+	def parseCoordinates(Cstr):								#Cstr = CoordinatesString
 		coordinates = []
 		Cstr = Cstr.split(";")										# Split string on ;
 		for i in range(0,len(Cstr)):								# For every coord
@@ -159,6 +170,7 @@ class ContaminationSimulation:
 				out += " " + str(self.Grid[row][col])
 			out +="\n"
 		print(out)
+		return out
 
 	# displayStats
 	# Display current statistics
@@ -267,7 +279,6 @@ class TestStringMethods(unittest.TestCase):
 		self.numOfImmune = 0									# Counter for number of immune
 		individual = Individual(self,SICK)
 		self.assertFalse(individual.tryToInfect(1.0))
-
 	def test_BI(self):
 		self.day = 0											# Counter for days
 		self.numOfSick = 0										# Counter for number of sick
@@ -358,6 +369,34 @@ class TestStringMethods(unittest.TestCase):
 		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 5, "1,2"])
 		cS.run()
 		self.assertEqual(cS.numOfDeath, 25)
+	def test_cs_grid(self):
+		random.seed(3)
+		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2"])
+		self.assertEqual(cS.displayGrid(), " H H H\n H H S\n H H H\n")
+	def test_cs_grid2(self):
+		random.seed(3)
+		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2;1,1"])
+		self.assertEqual(cS.displayGrid(), " H H H\n H S S\n H H H\n")
+	def test_get_neighbours(self):
+		self.assertEqual(Individual.popleftNeighbours([0,0], 3), [[0,1],[1,0],[1,1]])
+	def test_get_neighbours2(self):
+		self.assertEqual(Individual.popleftNeighbours([1,1], 3), [[0,0],[0,1],[0,2],[1,0],[1,2],[2,0],[2,1],[2,2]])
+	def test_get_neighbours3(self):
+		self.assertEqual(Individual.popleftNeighbours([2,2], 3), [[1,1],[1,2],[2,1]])
+	def test_immune_prob(self):
+		self.assertEqual(Individual.immuneProbilty(2,4,0), 0)
+	def test_immune_prob2(self):
+		self.assertEqual(Individual.immuneProbilty(2,4,3), 0.5)
+	def test_immune_prob3(self):
+		self.assertEqual(Individual.immuneProbilty(0,100,3), 0.01)
+	def test_immune_prob4(self):
+		self.assertEqual(Individual.immuneProbilty(2,4,6), 1)
+	def test_parse_coordinates(self):
+		self.assertEqual(ContaminationSimulation.parseCoordinates("0,0;0,1;1,1"), [[0,0],[0,1],[1,1]])
+	def test_parse_coordinates(self):
+		self.assertEqual(ContaminationSimulation.parseCoordinates("0,0"), [[0,0]])
+
+
 
 
 #if __name__ == '__main__':
