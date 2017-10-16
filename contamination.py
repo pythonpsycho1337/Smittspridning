@@ -4,10 +4,6 @@ from collections import deque
 #Test library
 import unittest
 
-#Data analysis
-import matplotlib.pyplot as plt
-
-
 #Example call: py contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
 
 # States
@@ -127,7 +123,7 @@ class ContaminationSimulation:
                 self.maxSickDays = int(params[4]) 						# Maximun days an Individual is sick
                 self.gridDimension = int(params[5] )					# The dimensions of the grid
                 self.generateGrid(self.parseCoordinates(params[6])) 	# Generate the grid using the coordinates of the sick Individuals
-			
+
 	# parseCoordinates
 	# Parse coordinates from a string
 	#	Cstr = CoordinatesString, string to parse
@@ -377,21 +373,21 @@ class TestStringMethods(unittest.TestCase):
 		self.assertFalse(individual.tryToDie(1.0))
 	def test_cs_sick(self):
 		random.seed(3)
-		cS = ContaminationSimulation([0.0,1.0, 0.0, 0, 5, 5, "1,2"])
+		cS = ContaminationSimulation([0.0,1.0, 0.0, 0, 5, 5, "1,2"], False)
 		cS.run()
 		self.assertEqual(cS.numOfImmune, 25)
 	def test_cs_dead(self):
 		random.seed(3)
-		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 5, "1,2"])
+		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 5, "1,2"], False)
 		cS.run()
 		self.assertEqual(cS.numOfDeath, 25)
 	def test_cs_grid(self):
 		random.seed(3)
-		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2"])
+		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2"], False)
 		self.assertEqual(cS.displayGrid(), " H H H\n H H S\n H H H\n")
 	def test_cs_grid2(self):
 		random.seed(3)
-		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2;1,1"])
+		cS = ContaminationSimulation([0.0,1.0, 1.0, 0, 5, 3, "1,2;1,1"], False)
 		self.assertEqual(cS.displayGrid(), " H H H\n H S S\n H H H\n")
 	def test_get_neighbours(self):
 		self.assertEqual(Individual.popleftNeighbours([0,0], 3), [[0,1],[1,0],[1,1]])
@@ -414,26 +410,52 @@ class TestStringMethods(unittest.TestCase):
 
 class DataCollection():
         def __init__(self,simParams):
-                self.simParams = simParams
-        	self.CS = ContaminationSimulation(self.simParams,False)
+			self.simParams = simParams
+			self.CS = ContaminationSimulation(self.simParams,False)
         def sample(self,nOfSims,enablePrinting):
-                if enablePrinting:
-                        print "Seed:[Total,Dead,Immune,Infected,Healthy]:Epidemic"
+                #if enablePrinting:
+                #        print "Seed:[Total,Dead,Immune,Infected,Healthy]:Epidemic"
         	for i in range(0,nOfSims):
                         random.seed(i)
                         self.CS.resetSimulation(self.simParams)
                         result = self.CS.run()
                         if enablePrinting:
-                                sys.stdout.write(str(i)+":")
-                                sys.stdout.write(format(result)+":")
-                                print int(self.isEpidemic(result))
-                                
+							#sys.stdout.write(str(i)+";")
+
+							out=""
+							for s in result:
+								out += "" + str(s) + ";"
+							sys.stdout.write(out)
+
+							sys.stdout.write(str(int(self.isEpidemic(result))) + "\n")
+	def sim(self):
+		sys.stdout.write("Size;Sick;Death;mindays;maxSickDays;Total;Dead;Immune;Infected;Healthy;Epidemic\n")
+		for size in range(30,31):
+			for sick in range(1, 50):
+				for death in range(1, 50):
+					for mindays in range(20,21):
+						for maxSickDays in range(50,51):
+							maxSickDays = mindays + maxSickDays
+							sys.stdout.write(str(size) + ";" + str(sick/100.0) + ";" + str(death/100.0) + ";"+ str(mindays) + ";"+ str(maxSickDays) + ";" )
+							self.simParams = [0,sick/100.0, death/100.0, mindays, maxSickDays, size, "1,2;13,15"]
+							self.sample(1, True)
+
         def isEpidemic(self,totStatsObj):
                 #(Dead+Immune)/Total
-                if ((totStatsObj[1]+totStatsObj[2])/totStatsObj[0] > 0.5):
+                if ((float(totStatsObj[4]))/float(totStatsObj[0]) <= 0.5):
                         return True
                 else:
                         return False
+		@staticmethod
+		def resultStr(result):
+			out=""
+			for s in result:
+				out += "" + str(s) + ";"
+			sys.stdout.write(out)
+			return out
+
+
+
 
 
 if __name__ == "__main__":
@@ -441,7 +463,7 @@ if __name__ == "__main__":
 		#S.run()
 		# Analyzing data
 		DC = DataCollection(sys.argv)
-		DC.sample(100,True)
+		DC.sim()
 
 		# Testing
 		# unittest.main()
