@@ -1,6 +1,13 @@
 import os, sys, time, random, platform
 from collections import deque
 
+#Test library
+import unittest
+
+#Data analysis
+import matplotlib.pyplot as plt
+
+
 #Example call: py contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
 
 # States
@@ -94,30 +101,33 @@ class Individual:
 
 
 class ContaminationSimulation:
-	def __init__(self,params):
+	def __init__(self,params,enablePrinting=True):
+                self.enablePrinting = enablePrinting                    #Whether to print out data
 		if len(params) >= 5:
-			self.day = 0											# Counter for days
-			self.numOfSick = 0										# Counter for number of sick
-			self.numOfDeath = 0										# Counter for number of dead
-			self.numOfImmune = 0									# Counter for number of immune
-			self.prevNumOfSick = 0
-			self.prevNumOfDeath = 0
-			self.prevNumOfImmune = 0
-
-			self.queue = deque()									# Queue for sick individuals
-			self.probCont = float(params[1]) 						# Probability of contamination
-			self.probDeath = float(params[2]) 						# Probability of death
-			self.minSickDays = int(params[3])						# Minimum days an Individual is sick
-			self.maxSickDays = int(params[4]) 						# Maximun days an Individual is sick
-			self.gridDimension = int(params[5] )					# The dimensions of the grid
-			self.generateGrid(self.parseCoordinates(params[6])) 	# Generate the grid using the coordinates of the sick Individuals
-
+			self.resetSimulation(params);
 		else:														# Error message for incorrect input
 			out = "Usage: python contamination.py <Probability of contamination> <Probability of death> <Min Sick Days> <Max Sick Days> "
 			out += "<Grid dimensions><Coordinates of sick Individuals>"
 			out+="\nCoordinates are specified in the following format x,y;x2,y2 where x=0,y=0 is in the top left corner.\nExample: 1,2;1,3"
 			print (out)
 			sys.exit(0)
+	def resetSimulation(self,params):
+                self.day = 0											# Counter for days
+                self.numOfSick = 0										# Counter for number of sick
+                self.numOfDeath = 0										# Counter for number of dead
+                self.numOfImmune = 0									# Counter for number of immune
+                self.prevNumOfSick = 0
+                self.prevNumOfDeath = 0
+                self.prevNumOfImmune = 0
+                self.queue = deque()									# Queue for sick individuals
+
+                self.probCont = float(params[1]) 						# Probability of contamination
+                self.probDeath = float(params[2]) 						# Probability of death
+                self.minSickDays = int(params[3])						# Minimum days an Individual is sick
+                self.maxSickDays = int(params[4]) 						# Maximun days an Individual is sick
+                self.gridDimension = int(params[5] )					# The dimensions of the grid
+                self.generateGrid(self.parseCoordinates(params[6])) 	# Generate the grid using the coordinates of the sick Individuals
+			
 	# parseCoordinates
 	# Parse coordinates from a string
 	#	Cstr = CoordinatesString, string to parse
@@ -147,6 +157,16 @@ class ContaminationSimulation:
 			self.Grid[sickCoord[i][0]][sickCoord[i][1]].state = SICK# Set individual to sick
 			self.queue.append(sickCoord[i])							# Append to queue of sick individuals
 			self.numOfSick += 1										# Increment number of sick
+        #getTotStats
+        #Returns the total statistics
+	def getTotStats(self):
+		total = self.gridDimension * self.gridDimension
+		dead = self.numOfDeath
+		immune = self.numOfImmune
+		infected = self.numOfSick
+		healthy = total - self.numOfSick - self.numOfDeath - self.numOfImmune	# Total number of healthy individual
+
+		return [total,dead,immune,infected, healthy]
 
 	# display
 	# Display current state of the simulation
@@ -187,22 +207,25 @@ class ContaminationSimulation:
 	#	Run simulation
 	def run(self):
 		self.infected = 0
-		self.display()												# Display initial state
+		if self.enablePrinting:
+                        self.display()										# Display initial state
 
 		#animate("Press enter to continue...\n")
-		#raw_inappend()
+		#raw_input()
 		while len(self.queue) != 0:									# Run until no individuals are sick
 			#time.sleep(0.5)
 			self.nextQueue = deque()								# Create queue for next day
 			while len(self.queue) != 0:								# One day, go trough every sick Individual
-				self.playOneDay(self.queue.popleft())				# Run sick individual runtine
+				self.playOneDay(self.queue.popleft())				                # Run sick individual runtime
 			self.queue = self.nextQueue
-			self.day += 1											# Increment day
-			self.display()											# Display current state
-			self.prevNumOfSick = self.numOfSick						# Save previous values
+			self.day += 1										# Increment day
+                        if self.enablePrinting:
+                                self.display()									# Display current state
+			self.prevNumOfSick = self.numOfSick						        # Save previous values
 			self.prevNumOfDeath = self.numOfDeath
 			self.prevNumOfImmune = self.numOfImmune
 			self.infected = 0
+		return self.getTotStats()
 
 	# palyOneDay
 	# Input:
@@ -231,13 +254,6 @@ def clearTerminal():
 		os.system("cls")
 	else:
 		os.system("clear")
-
-if __name__ == "__main__":
-	random.seed(3)
-	cS = ContaminationSimulation(sys.argv)
-	cS.run()
-
-import unittest
 
 class TestStringMethods(unittest.TestCase):
 	def test_infect(self):
@@ -396,8 +412,36 @@ class TestStringMethods(unittest.TestCase):
 	def test_parse_coordinates(self):
 		self.assertEqual(ContaminationSimulation.parseCoordinates("0,0"), [[0,0]])
 
+class DataCollection():
+        def __init__(self,simParams):
+                self.simParams = simParams
+        	self.CS = ContaminationSimulation(self.simParams,False)
+        def sample(self,nOfSims,enablePrinting):
+                if enablePrinting:
+                        print "Seed:[Total,Dead,Immune,Infected,Healthy]:Epidemic"
+        	for i in range(0,nOfSims):
+                        random.seed(i)
+                        self.CS.resetSimulation(self.simParams)
+                        result = self.CS.run()
+                        if enablePrinting:
+                                sys.stdout.write(str(i)+":")
+                                sys.stdout.write(format(result)+":")
+                                print int(self.isEpidemic(result))
+                                
+        def isEpidemic(self,totStatsObj):
+                #(Dead+Immune)/Total
+                if ((totStatsObj[1]+totStatsObj[2])/totStatsObj[0] > 0.5):
+                        return True
+                else:
+                        return False
 
 
+if __name__ == "__main__":
+		#S = ContaminationSimulation(sys.argv)
+		#S.run()
+		# Analyzing data
+		DC = DataCollection(sys.argv)
+		DC.sample(100,True)
 
-#if __name__ == '__main__':
-#    unittest.main()
+		# Testing
+		# unittest.main()
