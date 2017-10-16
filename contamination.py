@@ -409,7 +409,7 @@ class TestStringMethods(unittest.TestCase):
 		self.assertEqual(Individual.immuneProbilty(2,4,6), 1)
 	def test_parse_coordinates(self):
 		self.assertEqual(ContaminationSimulation.parseCoordinates("0,0;0,1;1,1"), [[0,0],[0,1],[1,1]])
-	def test_parse_coordinates(self):
+	def test_parse_coordinates2(self):
 		self.assertEqual(ContaminationSimulation.parseCoordinates("0,0"), [[0,0]])
 
 class DataCollection():
