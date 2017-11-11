@@ -100,7 +100,7 @@ class ContaminationSimulation:
 	def __init__(self,params,enablePrinting=True):
                 self.enablePrinting = enablePrinting                    #Whether to print out data
 		if len(params) >= 5:
-			self.resetSimulation(params);
+			self.resetSimulation(params)
 		else:														# Error message for incorrect input
 			out = "Usage: python contamination.py <Probability of contamination> <Probability of death> <Min Sick Days> <Max Sick Days> "
 			out += "<Grid dimensions><Coordinates of sick Individuals>"
@@ -430,14 +430,14 @@ class DataCollection():
 							sys.stdout.write(str(int(self.isEpidemic(result))) + "\n")
 	def sim(self):
 		sys.stdout.write("Size;Sick;Death;mindays;maxSickDays;Total;Dead;Immune;Infected;Healthy;Epidemic\n")
-		for size in range(30,31):
+		for size in range(40,41):
 			for sick in range(1, 50):
-				for death in range(1, 50):
-					for mindays in range(20,21):
-						for maxSickDays in range(50,51):
+				for death in range(0, 1):
+					for mindays in range(6,7):
+						for maxSickDays in range(9,10):
 							maxSickDays = mindays + maxSickDays
 							sys.stdout.write(str(size) + ";" + str(sick/100.0) + ";" + str(death/100.0) + ";"+ str(mindays) + ";"+ str(maxSickDays) + ";" )
-							self.simParams = [0,sick/100.0, death/100.0, mindays, maxSickDays, size, "1,2;13,15"]
+							self.simParams = [0,sick/100.0, death/100.0, mindays, maxSickDays, size, "20,20"]
 							self.sample(1, True)
 
         def isEpidemic(self,totStatsObj):
