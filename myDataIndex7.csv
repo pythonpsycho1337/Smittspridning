@@ -1,0 +1,4 @@
+Index;Size;Sick;Death;mindays;maxSickDays;Total;Dead;Immune;Infected;Healthy;Epidemic
+0.03;1;48;199;368;499
+0.0301;1;48;208;389;503
+0.0302;1;53;301;339;560

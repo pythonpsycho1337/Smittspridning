@@ -1,5 +1,6 @@
 import os, sys, time, random, platform
 from collections import deque
+from operator import itemgetter
 
 #Test library
 import unittest
@@ -13,10 +14,10 @@ DEAD = 3
 IMMUNE = 4
 
 class Individual:
-	def __init__(self, parrent,state):
-		self.state = state											# Set initial States
-		self.days = 0												# Variable to count sick days
-		self.parrent = parrent										# Ref to parrent
+	def __init__(self, parent,state):
+		self.state = state										# Set initial States
+		self.days = 0                                                                                   # Variable to count sick days
+		self.parent = parent										# Ref to parent
 	def __str__(self):
 		if self.state == HEALTHY:									# Healthy -> H
 			return "H"
@@ -34,7 +35,7 @@ class Individual:
 	def tryToInfect(self,probabilty):
 		if self.state == HEALTHY and random.random() < probabilty: 	#
 			self.state = SICK									 	# Change state to SICK
-			self.parrent.numOfSick += 1								# Increment number of sick
+			self.parent.numOfSick += 1								# Increment number of sick
 			return 1
 		return 0
 	# Try to Die
@@ -46,8 +47,8 @@ class Individual:
 			return 0
 		if random.random() < probabilty:							#
 			self.state = DEAD										# Change state to DEAD
-			self.parrent.numOfSick -= 1								# Decrement number of sick
-			self.parrent.numOfDeath += 1							# Increment number of dead
+			self.parent.numOfSick -= 1								# Decrement number of sick
+			self.parent.numOfDeath += 1							# Increment number of dead
 			return 1
 		return 0
 	# Try to becomde immune
@@ -62,8 +63,8 @@ class Individual:
 		probabilty = self.immuneProbilty(minSickDays, maxSickDays, self.days)
 		if r < probabilty:											# Chance of becoming immune
 			self.state = IMMUNE										# Change state to IMMUNE
-			self.parrent.numOfSick -= 1								# Decrement number of sick
-			self.parrent.numOfImmune += 1							# Increment number of immune
+			self.parent.numOfSick -= 1								# Decrement number of sick
+			self.parent.numOfImmune += 1							# Increment number of immune
 			return 1
 		return 0
 
@@ -161,7 +162,6 @@ class ContaminationSimulation:
 		immune = self.numOfImmune
 		infected = self.numOfSick
 		healthy = total - self.numOfSick - self.numOfDeath - self.numOfImmune	# Total number of healthy individual
-
 		return [total,dead,immune,infected, healthy]
 
 	# display
@@ -235,7 +235,7 @@ class ContaminationSimulation:
 				self.infected += 1
 
 		self.Grid[x][y].tryToDie(self.probDeath)					# Try to die
-		self.Grid[x][y].tryToBI(self.minSickDays, self.maxSickDays)	# Try to become immune
+		self.Grid[x][y].tryToBI(self.minSickDays, self.maxSickDays)	                # Try to become immune
 		if self.Grid[x][y].state == SICK:
 			self.nextQueue.append(individual)
 			self.Grid[x][y].days += 1
@@ -412,33 +412,35 @@ class DataCollection():
         def __init__(self,simParams):
 			self.simParams = simParams
 			self.CS = ContaminationSimulation(self.simParams,False)
-        def sample(self,nOfSims,enablePrinting):
-                #if enablePrinting:
-                #        print "Seed:[Total,Dead,Immune,Infected,Healthy]:Epidemic"
-        	for i in range(0,nOfSims):
-                        random.seed(i)
-                        self.CS.resetSimulation(self.simParams)
-                        result = self.CS.run()
-                        if enablePrinting:
-							#sys.stdout.write(str(i)+";")
-
-							out=""
-							for s in result:
-								out += "" + str(s) + ";"
-							sys.stdout.write(out)
-
-							sys.stdout.write(str(int(self.isEpidemic(result))) + "\n")
+        def sample(self):
+                self.CS.resetSimulation(self.simParams)
+                result = self.CS.run()
+                result.append(int(self.isEpidemic(result)))
+                return result
 	def sim(self):
-		sys.stdout.write("Size;Sick;Death;mindays;maxSickDays;Total;Dead;Immune;Infected;Healthy;Epidemic\n")
+		sys.stdout.write("Index;Size;Sick;Death;mindays;maxSickDays;Total;Dead;Immune;Infected;Healthy;Epidemic\n")
 		for size in range(40,41):
-			for sick in range(1, 50):
+			for sick in range(0,100):
 				for death in range(0, 1):
 					for mindays in range(6,7):
 						for maxSickDays in range(9,10):
-							maxSickDays = mindays + maxSickDays
-							sys.stdout.write(str(size) + ";" + str(sick/100.0) + ";" + str(death/100.0) + ";"+ str(mindays) + ";"+ str(maxSickDays) + ";" )
-							self.simParams = [0,sick/100.0, death/100.0, mindays, maxSickDays, size, "20,20"]
-							self.sample(1, True)
+                                                        results = []
+                                                        for seed in range(0,13):
+                                                                random.seed(seed)
+                                                                self.simParams = [0,sick/1000.0, death/100.0, mindays, maxSickDays, size, "20,20"]
+                                                                results.append(self.sample())
+                                                        results = sorted(results, key=itemgetter(2))#Sort results by immune to calculate min, max and median values
+                                                        out = str(sick/1000.0)+";"
+                                                        for index in [0,3,6,9,12]:
+                                                                out += str(results[index][2])+";"
+                                                                #sys.stdout.write(str(size) + ";" + str(sick/10000.0) + ";" + str(death/100.0) + ";"+ str(mindays) + ";"+ str(maxSickDays) + ";" )
+                                                                #out = ""
+                                                                #for s in results[index]:
+                                                                #        out += str(s)+";"
+                                                                #out = out[:-1] + "\n"
+                                                        out = out[:-1] + "\n"
+                                                        sys.stdout.write(out)
+
 
         def isEpidemic(self,totStatsObj):
                 #(Dead+Immune)/Total
