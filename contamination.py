@@ -100,14 +100,6 @@ class Individual:
 class ContaminationSimulation:
 	def __init__(self,params,enablePrinting=True):
                 self.enablePrinting = enablePrinting                    #Whether to print out data
-		if len(params) >= 5:
-			self.resetSimulation(params)
-		else:														# Error message for incorrect input
-			out = "Usage: python contamination.py <Probability of contamination> <Probability of death> <Min Sick Days> <Max Sick Days> "
-			out += "<Grid dimensions><Coordinates of sick Individuals>"
-			out+="\nCoordinates are specified in the following format x,y;x2,y2 where x=0,y=0 is in the top left corner.\nExample: 1,2;1,3"
-			print (out)
-			sys.exit(0)
 	def resetSimulation(self,params):
                 self.day = 0											# Counter for days
                 self.numOfSick = 0										# Counter for number of sick
@@ -459,7 +451,7 @@ if __name__ == "__main__":
 		#S = ContaminationSimulation(sys.argv)
 		#S.run()
 		# Analyzing data
-		DC = DataCollection(sys.argv)
+		DC = DataCollection([])
 		DC.sim()
 
 		# Testing
