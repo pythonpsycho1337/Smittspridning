@@ -4,11 +4,8 @@ from collections import deque
 #Test library
 import unittest
 
-#Data analysis
-import matplotlib.pyplot as plt
 
-
-#Example call: py contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
+#Example call: python contamination.py 0.01 0.01 0 400 30 0,0;5,5;22,22;15,15
 
 # States
 HEALTHY = 1
@@ -213,7 +210,7 @@ class ContaminationSimulation:
 		#animate("Press enter to continue...\n")
 		#raw_input()
 		while len(self.queue) != 0:									# Run until no individuals are sick
-			#time.sleep(0.5)
+			time.sleep(0.5)
 			self.nextQueue = deque()								# Create queue for next day
 			while len(self.queue) != 0:								# One day, go trough every sick Individual
 				self.playOneDay(self.queue.popleft())				                # Run sick individual runtime
@@ -437,11 +434,8 @@ class DataCollection():
 
 
 if __name__ == "__main__":
-		#S = ContaminationSimulation(sys.argv)
-		#S.run()
-		# Analyzing data
-		DC = DataCollection(sys.argv)
-		DC.sample(100,True)
+		S = ContaminationSimulation(sys.argv)
+		S.run()
 
 		# Testing
 		# unittest.main()
