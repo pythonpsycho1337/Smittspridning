@@ -33,7 +33,7 @@ class Individual:
 	# Input:
 	# 	probabilty, the probabilty of being infected
 	def tryToInfect(self,probabilty):
-		if self.state == HEALTHY and random.random() < probabilty: 	#
+		if self.state == HEALTHY and random.random() < probabilty:
 			self.state = SICK									 	# Change state to SICK
 			self.parent.numOfSick += 1								# Increment number of sick
 			return 1
@@ -425,19 +425,14 @@ class DataCollection():
 					for mindays in range(6,7):
 						for maxSickDays in range(9,10):
                                                         results = []
-                                                        for seed in range(0,13):
+                                                        for seed in range(0,101):
                                                                 random.seed(seed)
                                                                 self.simParams = [0,sick/1000.0, death/100.0, mindays, maxSickDays, size, "20,20"]
                                                                 results.append(self.sample())
                                                         results = sorted(results, key=itemgetter(2))#Sort results by immune to calculate min, max and median values
                                                         out = str(sick/1000.0)+";"
-                                                        for index in [0,3,6,9,12]:
+                                                        for index in [0,5,50,95,100]:
                                                                 out += str(results[index][2])+";"
-                                                                #sys.stdout.write(str(size) + ";" + str(sick/10000.0) + ";" + str(death/100.0) + ";"+ str(mindays) + ";"+ str(maxSickDays) + ";" )
-                                                                #out = ""
-                                                                #for s in results[index]:
-                                                                #        out += str(s)+";"
-                                                                #out = out[:-1] + "\n"
                                                         out = out[:-1] + "\n"
                                                         sys.stdout.write(out)
 
